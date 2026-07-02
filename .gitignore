@@ -1,0 +1,4 @@
+node_modules/
+test-results/
+playwright-report/
+fotos/_base64.json
