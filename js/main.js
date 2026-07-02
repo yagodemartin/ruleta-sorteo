@@ -6,29 +6,96 @@
     return;
   }
 
+  // ── State ────────────────────────────────────────────
+  let participants = cfg.participants.map(p => ({ ...p }));
+
   // ── DOM refs ─────────────────────────────────────────
-  const canvas = document.getElementById('wheel-canvas');
-  const spinBtn = document.getElementById('spin-btn');
-  const appTitle = document.getElementById('app-title');
-  const wheelWrapper = document.querySelector('.wheel-wrapper');
+  const canvas      = document.getElementById('wheel-canvas');
+  const spinBtn     = document.getElementById('spin-btn');
+  const appTitle    = document.getElementById('app-title');
+  const wheelWrapper = document.getElementById('wheel-wrapper');
+  const listEl      = document.getElementById('participant-list');
+  const nameInput   = document.getElementById('new-name-input');
+  const addBtn      = document.getElementById('add-btn');
+  const resetBtn    = document.getElementById('reset-btn');
 
   appTitle.textContent = cfg.title || 'Sorteo';
 
-  // ── Init modules ─────────────────────────────────────
-  const wheel = new Wheel(canvas, cfg);
-  const spin = new SpinController(wheel, cfg.sound !== false);
-  const confetti = new ConfettiSystem(cfg.colors);
-  const modal = new WinnerModal(onReset);
+  // ── Wheel instances ───────────────────────────────────
+  let wheel, spin, confetti, modal;
 
-  // Load participant photos then draw
-  wheel.loadImages(() => wheel.draw(0));
+  function buildWheel() {
+    const fakeCfg = { ...cfg, participants };
+    wheel    = new Wheel(canvas, fakeCfg);
+    spin     = new SpinController(wheel, cfg.sound !== false);
+    confetti = new ConfettiSystem(cfg.colors);
+    if (!modal) modal = new WinnerModal(onReset);
+    wheel.loadImages(() => wheel.draw(0));
+  }
 
-  // ── Spin button ──────────────────────────────────────
+  // ── Participant list UI ───────────────────────────────
+  function colorFor(i) {
+    return participants[i]?.color || cfg.colors[i % cfg.colors.length];
+  }
+
+  function renderList() {
+    listEl.innerHTML = '';
+    participants.forEach((p, i) => {
+      const li = document.createElement('li');
+      li.className = 'participant-item';
+      li.innerHTML = `
+        <span class="p-dot" style="background:${colorFor(i)}"></span>
+        <span class="p-name">${p.name}</span>
+        <button class="remove-btn" data-i="${i}" aria-label="Eliminar ${p.name}">×</button>
+      `;
+      listEl.appendChild(li);
+    });
+  }
+
+  function addParticipant(name) {
+    const trimmed = name.trim();
+    if (!trimmed) return;
+    participants.push({ name: trimmed });
+    renderList();
+    buildWheel();
+  }
+
+  function removeParticipant(i) {
+    if (participants.length <= 2) return; // mínimo 2
+    participants.splice(i, 1);
+    renderList();
+    buildWheel();
+  }
+
+  listEl.addEventListener('click', (e) => {
+    const btn = e.target.closest('.remove-btn');
+    if (btn) removeParticipant(Number(btn.dataset.i));
+  });
+
+  addBtn.addEventListener('click', () => {
+    addParticipant(nameInput.value);
+    nameInput.value = '';
+    nameInput.focus();
+  });
+
+  nameInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      addParticipant(nameInput.value);
+      nameInput.value = '';
+    }
+  });
+
+  resetBtn.addEventListener('click', () => {
+    participants = cfg.participants.map(p => ({ ...p }));
+    renderList();
+    buildWheel();
+  });
+
+  // ── Spin ─────────────────────────────────────────────
   spinBtn.addEventListener('click', () => {
-    if (spin.spinning) return;
+    if (!spin || spin.spinning || participants.length < 2) return;
 
-    const winnerIndex = Math.floor(Math.random() * cfg.participants.length);
-    // ?spinDuration=N URL param overrides config (used by automated tests)
+    const winnerIndex = Math.floor(Math.random() * participants.length);
     const urlMs   = parseInt(new URLSearchParams(location.search).get('spinDuration'), 10);
     const duration = urlMs > 0 ? urlMs : Math.min(Math.max(cfg.spinDuration || 6000, 3000), 12000);
 
@@ -38,22 +105,20 @@
 
     spin.start(
       winnerIndex,
-      cfg.participants.length,
+      participants.length,
       duration,
       (t) => {
-        // Pulse glow intensity based on spin phase
-        if (t > 0.72) {
-          const decel = (t - 0.72) / 0.28;
+        if (t > 0.68) {
+          const decel = (t - 0.68) / 0.32;
           wheelWrapper.style.setProperty('--glow-alpha', (1 - decel * 0.6).toFixed(2));
         }
       },
       () => {
         wheelWrapper.classList.remove('spinning');
         wheelWrapper.classList.add('winner-glow');
-
         setTimeout(() => {
           confetti.burst();
-          modal.show(cfg.participants[winnerIndex].name);
+          modal.show(participants[winnerIndex].name);
         }, 350);
       }
     );
@@ -68,7 +133,7 @@
     spinBtn.textContent = 'GIRAR';
   }
 
-  // ── Resize ───────────────────────────────────────────
+  // ── Resize ────────────────────────────────────────────
   let resizeTimer;
   window.addEventListener('resize', () => {
     clearTimeout(resizeTimer);
@@ -77,4 +142,8 @@
       wheel.draw(spin.currentRotation);
     }, 100);
   });
+
+  // ── Init ─────────────────────────────────────────────
+  renderList();
+  buildWheel();
 })();
