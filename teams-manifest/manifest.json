@@ -2,14 +2,14 @@
   "$schema": "https://developer.microsoft.com/en-us/json-schemas/teams/v1.16/MicrosoftTeams.schema.json",
   "manifestVersion": "1.16",
   "version": "1.0.0",
-  "id": "a3f2e1d0-4b5c-6d7e-8f9a-0b1c2d3e4f50",
+  "id": "a3f2e1d0-4b5c-6d7e-8f9a-0b1c2d3e4f51",
   "name": {
     "short": "Ruleta Sorteo",
     "full": "Ruleta de Sorteo"
   },
   "description": {
     "short": "Sorteo con ruleta animada",
-    "full": "Ruleta interactiva para sorteos. Añade participantes, gira y descubre al ganador con animaciones."
+    "full": "Ruleta interactiva para sorteos. Añade participantes, gira y descubre al ganador con animaciones y confetti."
   },
   "developer": {
     "name": "yagodemartin",
@@ -24,13 +24,13 @@
   "accentColor": "#E94560",
   "staticTabs": [
     {
-      "entityId": "ruleta",
+      "entityId": "ruleta-tab",
       "name": "Ruleta",
       "contentUrl": "https://yagodemartin.github.io/ruleta-sorteo/",
       "websiteUrl": "https://yagodemartin.github.io/ruleta-sorteo/",
-      "scopes": ["personal", "team", "groupChat"]
+      "scopes": ["personal"]
     }
   ],
-  "permissions": ["identity", "messageTeamMembers"],
+  "permissions": ["identity"],
   "validDomains": ["yagodemartin.github.io"]
 }
